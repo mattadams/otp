@@ -1157,7 +1157,12 @@ static unsigned int gen_challenge(void)
     uname(&s.name);
     s.cpu  = clock();
     s.pid  = getpid();
+    #ifndef ANDROID_ARM
     s.hid  = gethostid();
+    #else
+    //TODO Proper android fix
+    s.hid = 0;
+    #endif
     s.uid  = getuid();
     s.gid  = getgid();
 

@@ -108,7 +108,7 @@ $(OBJDIR)/%.o: %.c
 
 $(LIBDIR)/crypto_drv.so: $(OBJS)
 	$(INSTALL_DIR) $(LIBDIR) 
-	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS) $(CRYPTO_LINK_LIB)
+	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS) $(CRYPTO_LINK_LIB) $(LIBS) -lbeam
 
 $(LIBDIR)/crypto_drv.dll: $(OBJS)
 	$(INSTALL_DIR) $(LIBDIR)

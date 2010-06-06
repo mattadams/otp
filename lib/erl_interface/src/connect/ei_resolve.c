@@ -54,7 +54,7 @@
 #include "ei_resolve.h"
 #include "ei_locking.h"
 
-#ifdef HAVE_GETHOSTBYNAME_R
+#if (defined(HAVE_GETHOSTBYNAME_R) && !defined(ANDROID_ARM))
 
 void ei_init_resolve(void)
 {
@@ -625,7 +625,7 @@ struct hostent *ei_gethostbyname_r(const char *name,
   /* threads disabled, no need to call reentrant function */
   return gethostbyname(name);
 #else
-#ifndef HAVE_GETHOSTBYNAME_R
+#if (!defined(HAVE_GETHOSTBYNAME_R) || defined(ANDROID_ARM))
   return my_gethostbyname_r(name,hostp,buffer,buflen,h_errnop);
 #else
 #if (defined(__GLIBC__) || (__FreeBSD_version >= 602000))

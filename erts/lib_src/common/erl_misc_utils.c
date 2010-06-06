@@ -541,7 +541,7 @@ cpu_cmp(const void *vx, const void *vy)
     return 0;
 }
 
-#ifdef __linux__
+#if (defined(__linux__) && !defined(ANDROID_ARM))
 
 static int
 read_file(char *path, char *buf, int size)

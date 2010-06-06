@@ -370,7 +370,7 @@ get_extended_mem_vxwork(memory_ext *me) {
 }
 #endif
 
-
+#ifndef ANDROID_ARM
 #if defined(__linux__) /* ifdef SYSINFO */
 /* sysinfo does not include cached memory which is a problem. */
 static int
@@ -391,7 +391,7 @@ get_extended_mem_sysinfo(memory_ext *me) {
     return 1;
 }
 #endif
-
+#endif
 
 #if defined(_SC_AVPHYS_PAGES)
 static int
@@ -449,7 +449,9 @@ get_extended_mem(memory_ext *me) {
 /* linux */
 #elif defined(__linux__)
     if (get_mem_procfs(me))  return;
+#ifndef ANDROID_ARM
     if (get_extended_mem_sysinfo(me)) return;
+#endif
 
 /* bsd */
 #elif defined(BSD4_4)

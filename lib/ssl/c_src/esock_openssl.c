@@ -1038,7 +1038,7 @@ static void callback_data_free(void *parent, void *ptr, CRYPTO_EX_DATA *ad,
 	esock_free(cb_data);
     }
 }
-
+#ifndef ANDROID_ARM
 static RSA *tmp_rsa_callback(SSL *ssl, int is_export, int keylen)
 {
     static RSA *rsa512 = NULL;
@@ -1064,6 +1064,38 @@ static RSA *tmp_rsa_callback(SSL *ssl, int is_export, int keylen)
 	return rsa512;
     }
 }
+#else
+static RSA *tmp_rsa_callback(SSL *ssl, int is_export, int keylen)
+{
+    static RSA *rsa512 = NULL;
+    static RSA *rsa1024 = NULL;
+
+    switch (keylen) {
+    case 512:
+	rsa512 = RSA_new();
+	if (rsa512)
+	    RSA_generate_key_ex(rsa512, keylen, RSA_F4, NULL);
+	return rsa512;
+	break;
+    case 1024:
+	rsa1024 = RSA_new();
+	if (rsa1024)
+	    RSA_generate_key_ex(rsa1024, keylen, RSA_F4, NULL);
+	return rsa1024;
+	break;
+    default:
+	if (rsa1024)
+	    return rsa1024;
+	if (rsa512)
+	    return rsa512;
+	rsa512 = RSA_new();
+	if (rsa512)
+	    RSA_generate_key_ex(rsa512, keylen, RSA_F4, NULL);
+	return rsa512;
+    }
+}
+
+#endif
 
 /* Restrict protocols (SSLv2, SSLv3, TLSv1) */
 static void restrict_protocols(SSL_CTX *ctx)

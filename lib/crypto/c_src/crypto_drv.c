@@ -52,7 +52,9 @@
 #include <openssl/objects.h>
 #include <openssl/rc4.h>
 #include <openssl/rc2.h>
+#ifndef ANDROID_ARM
 #include <openssl/blowfish.h>
+#endif
 #include <openssl/rand.h>
 
 #ifdef VALGRIND
@@ -537,7 +539,8 @@ static int crypto_control(ErlDrvData drv_data, unsigned int command, char *buf,
         DES_ncbc_encrypt(des_dbuf, bin, dlen, &schedule, des_ivec, 
                          (command == DRV_CBC_DES_ENCRYPT));
         return dlen;
-
+    #ifndef ANDROID_ARM
+    //Android OpenSSL does not have Blowfish
     case DRV_BF_ECB_ENCRYPT:
     case DRV_BF_ECB_DECRYPT:
     {
@@ -637,7 +640,7 @@ static int crypto_control(ErlDrvData drv_data, unsigned int command, char *buf,
 	BF_cfb64_encrypt(bf_dbuf, bin, dlen, &bf_key, bf_tkey, &bf_n, bf_direction);
 	return dlen;
     }
-
+    #endif
 /*     case DRV_CBC_IDEA_ENCRYPT: */
 /*     case DRV_CBC_IDEA_DECRYPT: */
          /* buf = key[16] ivec[8] data */
