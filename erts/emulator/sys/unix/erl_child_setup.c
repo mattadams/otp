@@ -116,7 +116,11 @@ main(int argc, char *argv[])
 	    execv(argv[CS_ARGV_NO_OF_ARGS],&(argv[CS_ARGV_NO_OF_ARGS + 1]));
 	}
     } else {
+#ifdef ANDROID_ARM
+	execl("/system/bin/sh", "sh", "-c", argv[CS_ARGV_CMD_IX], (char *) NULL);
+#else
 	execl("/bin/sh", "sh", "-c", argv[CS_ARGV_CMD_IX], (char *) NULL);
+#endif
     }
     return 1;
 }

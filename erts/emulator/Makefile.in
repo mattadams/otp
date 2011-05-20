@@ -352,6 +352,7 @@ EMULATOR_EXECUTABLE = beam$(TF_MARKER).dll
 else
 ifeq ($(CC), agcc)
 EMULATOR_EXECUTABLE = libbeam$(TF_MARKER).so
+EMULATOR_EXECUTABLE_REG = beam$(TF_MARKER)
 else
 EMULATOR_EXECUTABLE = beam$(TF_MARKER)
 endif
@@ -374,7 +375,11 @@ ifeq ($(FLAVOR)-@ERTS_BUILD_SMP_EMU@,smp-no)
 all:
 	@echo '*** Omitted build of emulator with smp support'
 else
+ifeq ($(CC), agcc)
+all: generate erts_lib zlib pcre $(BINDIR)/$(EMULATOR_EXECUTABLE) $(BINDIR)/$(EMULATOR_EXECUTABLE_REG) $(UNIX_ONLY_BUILDS)
+else
 all: generate erts_lib zlib pcre $(BINDIR)/$(EMULATOR_EXECUTABLE) $(UNIX_ONLY_BUILDS)
+endif
 ifeq ($(OMIT_OMIT_FP),yes)
 	@echo '* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *'
 	@echo '* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *'
@@ -453,6 +458,7 @@ release_spec: all
 	$(INSTALL_DATA) $(RELEASE_INCLUDES) $(RELEASE_PATH)/usr/include
 	$(INSTALL_DATA) $(RELEASE_INCLUDES) $(RELSYSDIR)/include
 	$(INSTALL_PROGRAM) $(BINDIR)/$(EMULATOR_EXECUTABLE) $(RELSYSDIR)/bin
+	$(INSTALL_PROGRAM) $(BINDIR)/$(EMULATOR_EXECUTABLE_REG) $(RELSYSDIR)/bin
 ifeq ($(ERLANG_OSTYPE), unix)
 	$(INSTALL_PROGRAM) $(BINDIR)/$(CS_EXECUTABLE) $(RELSYSDIR)/bin
 endif
@@ -1013,6 +1019,13 @@ ifeq ($(CC), agcc)
 $(BINDIR)/$(EMULATOR_EXECUTABLE): $(INIT_OBJS) $(OBJS) $(DEPLIBS)
 	$(PURIFY) $(LD) -o $(BINDIR)/$(EMULATOR_EXECUTABLE) \
 	$(HIPEBEAMLDFLAGS) $(LDFLAGS) $(DEXPORT) $(INIT_OBJS) $(OBJS) $(LIBS) -shared
+
+$(OBJDIR)/beam.o:
+	$(CC) $(CFLAGS) $(INCLUDES) -c beam/beam.c -o $(OBJDIR)/beam.o
+
+$(BINDIR)/$(EMULATOR_EXECUTABLE_REG): $(OBJDIR)/beam.o
+	$(PURIFY) $(LD) -o $(BINDIR)/$(EMULATOR_EXECUTABLE_REG) \
+	$(HIPEBEAMLDFLAGS) $(LDFLAGS) $(DEXPORT) $(OBJDIR)/beam.o $(LIBS) -L$(BINDIR) -lbeam
 else
 $(BINDIR)/$(EMULATOR_EXECUTABLE): $(INIT_OBJS) $(OBJS) $(DEPLIBS)
 	$(PURIFY) $(LD) -o $(BINDIR)/$(EMULATOR_EXECUTABLE) \

@@ -1539,7 +1539,11 @@ static ErlDrvData spawn_start(ErlDrvPort port_num, char* name, SysDriverOpts* op
 		    }
 		}
 	    } else {
+#ifdef ANDROID_ARM
+		execle("/system/bin/sh", "sh", "-c", cmd_line, (char *) NULL, new_environ);
+#else
 		execle("/bin/sh", "sh", "-c", cmd_line, (char *) NULL, new_environ);
+#endif
 	    }
 	child_error:
 	    _exit(1);
@@ -1660,7 +1664,12 @@ static ErlDrvData spawn_start(ErlDrvPort port_num, char* name, SysDriverOpts* op
 	fcntl(i, F_SETFD, 1);
 
     qnx_spawn_options.flags = _SPAWN_SETSID;
+#ifdef ANDROID_ARM
+    /* Are we really in QNX?  Then we don't need this special case here... */
+    if ((pid = spawnl(P_NOWAIT, "/system/bin/sh", "/system/bin/sh", "-c", cmd_line, 
+#else
     if ((pid = spawnl(P_NOWAIT, "/bin/sh", "/bin/sh", "-c", cmd_line, 
+#endif
                       (char *) 0)) < 0) {
 	erts_free(ERTS_ALC_T_TMP, (void *) cmd_line);
         reset_qnx_spawn();
