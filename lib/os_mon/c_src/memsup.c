@@ -1,19 +1,19 @@
 /*
  * %CopyrightBegin%
- * 
+ *
  * Copyright Ericsson AB 1996-2009. All Rights Reserved.
- * 
+ *
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
  * compliance with the License. You should have received a copy of the
  * Erlang Public License along with this software. If not, it can be
  * retrieved online at http://www.erlang.org/.
- * 
+ *
  * Software distributed under the License is distributed on an "AS IS"
  * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
  * the License for the specific language governing rights and limitations
  * under the License.
- * 
+ *
  * %CopyrightEnd%
  */
 
@@ -47,19 +47,19 @@
  *
  *  When using SunOS 4, the memory report is faked. The total physical memory
  *  is always reported to be 256MB, and the used fraction to be 128MB.
- *  
- *  If capabilities, such as sysconf or procfs, is not defined on the system 
+ *
+ *  If capabilities, such as sysconf or procfs, is not defined on the system
  *  memsup will fake memory usage as well.
- *  
+ *
  *  Following ordering is defined for extended memory,
  *  Linux:	procfs -> sysinfo -> sysconf -> fake
  *  Sunos:	sysconf -> fake
  *  other:	arch specific
- *  
+ *
  *  Todo:
  *  Memory retrieval should be defined by capabilities and not by archs.
  *  Ordering should be defined arch.
- *  
+ *
  *  STANDARD INPUT, OUTPUT AND ERROR
  *
  *  This program communicates with Erlang through the standard
@@ -113,7 +113,7 @@
 #ifdef BSD4_4
 #include <sys/types.h>
 #include <sys/sysctl.h>
-#if !defined (__OpenBSD__) && !defined (__NetBSD__) 
+#if !defined (__OpenBSD__) && !defined (__NetBSD__)
 #include <vm/vm_param.h>
 #endif
 #if defined (__FreeBSD__) || defined(__DragonFly__)
@@ -135,7 +135,7 @@
 
 
 /* procfs */
-#if defined(__linux__) 
+#if defined(__linux__)
 #include <fcntl.h>
 #define MEMINFO "/proc/meminfo"
 #endif
@@ -159,8 +159,8 @@ static unsigned long latest_system_total; /* does not fit in the struct */
 
 
 /*
- * example, we want procfs information, now give them something equivalent: 
- * 
+ * example, we want procfs information, now give them something equivalent:
+ *
  * MemTotal:      4029352 kB	old 	HighTotal + LowTotal
  * MemFree:       1674168 kB	old	HighFree + LowFree
  * MemShared:           0 kB    old 	now always zero; not calculated
@@ -176,7 +176,7 @@ static unsigned long latest_system_total; /* does not fit in the struct */
 
  * HighTotal:           0 kB
  * HighFree:            0 kB		memory area for userspace programs or for the pagecache
- * LowTotal:      4029352 kB		
+ * LowTotal:      4029352 kB
  * LowFree:       1674168 kB		Highmem + kernel stuff, slab allocates here
 
  * SwapTotal:     4194296 kB	old	total amount of swap space available
@@ -194,7 +194,7 @@ static unsigned long latest_system_total; /* does not fit in the struct */
  * VmallocUsed:     57376 kB	??	amount of vmalloc area which is used
  * VmallocChunk: 34359677947 kB	??	largest contigious block of vmalloc area which is free
  * ReverseMaps:      5738       2.5.41+	number of rmap pte chains
- * SwapCached:          0 kB	2.5.??+	
+ * SwapCached:          0 kB	2.5.??+
  * HugePages_Total:     0	2.5.??+
  * HugePages_Free:      0	2.5.??+
  * HugePages_Rsvd:      0	2.5.??+
@@ -244,7 +244,7 @@ send(unsigned long value, unsigned long pagesize) {
     for (hex_zeroes = 0; (pagesize % 16) == 0; pagesize /= 16) {
 	hex_zeroes++;
     }
-    
+
     sprintf(buf+1, "%lx", value*pagesize);
     bytes = strlen(buf+1);
     while (hex_zeroes-- > 0) {
@@ -305,15 +305,15 @@ get_vmtotal(struct vmtotal *vt) {
 #if defined(__linux__)
 
 
-static int 
+static int
 get_mem_procfs(memory_ext *me){
     int fd, nread;
     char buffer[4097];
     char *bp;
     unsigned long value;
-    
+
     me->flag = 0;
-    
+
     if ( (fd = open(MEMINFO, O_RDONLY)) < 0) return -1;
 
     if ( (nread = read(fd, buffer, 4096)) < 0) {
@@ -323,35 +323,35 @@ get_mem_procfs(memory_ext *me){
     close(fd);
 
     buffer[nread] = '\0';
-    
+
     /* Total and free is NEEDED! */
-    
-    bp = strstr(buffer, "MemTotal:");    
+
+    bp = strstr(buffer, "MemTotal:");
     if (sscanf(bp, "MemTotal: %lu kB\n", &(me->total)))  me->flag |= F_MEM_TOTAL;
 
-    bp = strstr(buffer, "MemFree:");    
+    bp = strstr(buffer, "MemFree:");
     if (sscanf(bp, "MemFree: %lu kB\n", &(me->free)))    me->flag |= F_MEM_FREE;
-    
+
     /* Extensions */
-    
-    bp = strstr(buffer, "Buffers:");    
+
+    bp = strstr(buffer, "Buffers:");
     if (sscanf(bp, "Buffers: %lu kB\n", &(me->buffered))) me->flag |= F_MEM_BUFFERS;
-    
-    bp = strstr(buffer, "Cached:");    
+
+    bp = strstr(buffer, "Cached:");
     if (sscanf(bp, "Cached: %lu kB\n", &(me->cached)))   me->flag |= F_MEM_CACHED;
-    
+
 
     /* Swap */
-    
-    bp = strstr(buffer, "SwapTotal:");    
+
+    bp = strstr(buffer, "SwapTotal:");
     if (sscanf(bp, "SwapTotal: %lu kB\n", &(me->total_swap))) me->flag |= F_SWAP_TOTAL;
-    
-    bp = strstr(buffer, "SwapFree:");    
+
+    bp = strstr(buffer, "SwapFree:");
     if (sscanf(bp, "SwapFree: %lu kB\n", &(me->free_swap))) me->flag |= F_SWAP_FREE;
-    
+
     me->pagesize = 1024; /* procfs defines its size in kB */
-    
-    return 1;   
+
+    return 1;
 }
 #endif
 
@@ -370,7 +370,7 @@ get_extended_mem_vxwork(memory_ext *me) {
 }
 #endif
 
-
+#ifndef ANDROID_ARM
 #if defined(__linux__) /* ifdef SYSINFO */
 /* sysinfo does not include cached memory which is a problem. */
 static int
@@ -378,18 +378,19 @@ get_extended_mem_sysinfo(memory_ext *me) {
     struct sysinfo info;
     me->flag = 0;
     if (sysinfo(&info) < 0) return -1;
-    me->pagesize   = 1; 
+    me->pagesize   = 1;
     me->total      = info.totalram;
     me->free       = info.freeram;
     me->buffered   = info.bufferram;
     me->shared     = info.sharedram;
     me->total_swap = info.totalswap;
     me->free_swap  = info.freeswap;
-    
+
     me->flag = F_MEM_TOTAL | F_MEM_FREE | F_MEM_SHARED | F_MEM_BUFFERS | F_SWAP_TOTAL | F_SWAP_FREE;
 
     return 1;
 }
+#endif
 #endif
 
 
@@ -418,9 +419,9 @@ get_extended_mem_bsd4(memory_ext *me) {
     me->total      = (vt.t_free + vt.t_rm);
     me->free       = vt.t_free;
     me->pagesize   = pgsz;
-    
+
     me->flag = F_MEM_TOTAL | F_MEM_FREE;
-    
+
     return 1;
 }
 #endif
@@ -433,9 +434,9 @@ get_extended_mem_sgi(memory_ext *me) {
 
     me->total    = (unsigned long)(rmi.physmem);
     me->free     = (unsigned long)(rmi.freemem);
-    me->pagesize = (unsigned long)getpagesize(); 
+    me->pagesize = (unsigned long)getpagesize();
     me->flag = F_MEM_TOTAL | F_MEM_FREE;
-    
+
     return 1;
 }
 #endif
@@ -449,8 +450,9 @@ get_extended_mem(memory_ext *me) {
 /* linux */
 #elif defined(__linux__)
     if (get_mem_procfs(me))  return;
+#ifndef ANDROID_ARM
     if (get_extended_mem_sysinfo(me)) return;
-
+#endif
 /* bsd */
 #elif defined(BSD4_4)
     if (get_extended_mem_bsd4(me))    return;
@@ -466,16 +468,16 @@ get_extended_mem(memory_ext *me) {
 
 /* We fake the rest */
 /* SunOS4 (for example) */
-#else  
+#else
     me->free     = (1<<27);	       	/* Fake! 128 MB used */
     me->total    = (1<<28);		/* Fake! 256 MB total */
     me->pagesize = 1;
     me->flag = F_MEM_TOTAL | F_MEM_FREE;
 #endif
 }
-    
 
-static void 
+
+static void
 get_basic_mem(unsigned long *tot, unsigned long *used, unsigned long *pagesize){
 #if defined(VXWORKS)
     load_statistics();
@@ -484,7 +486,7 @@ get_basic_mem(unsigned long *tot, unsigned long *used, unsigned long *pagesize){
     *pagesize = 1;
 #elif defined(_SC_AVPHYS_PAGES)	/* Does this exist on others than Solaris2? */
     unsigned long avPhys, phys, pgSz;
-    
+
     phys = sysconf(_SC_PHYS_PAGES);
     avPhys = sysconf(_SC_AVPHYS_PAGES);
     *used = (phys - avPhys);
@@ -517,17 +519,17 @@ fail:
     if (sysmp(MP_SAGET, MPSA_RMINFO, &rmi, sizeof(rmi)) != -1) {
 	*tot = (unsigned long)(rmi.physmem);
 	*used = (unsigned long)(rmi.physmem - rmi.freemem);
-	*pagesize = (unsigned long)getpagesize(); 
+	*pagesize = (unsigned long)getpagesize();
     } else {
 	print_error("%s", strerror(errno));
-	exit(1); 
+	exit(1);
     }
 #else  /* SunOS4 */
     *used = (1<<27);	       	/* Fake! 128 MB used */
     *tot = (1<<28);		/* Fake! 256 MB total */
     *pagesize = 1;
 #endif
-}    
+}
 
 static void
 simple_show_mem(void){
@@ -537,14 +539,14 @@ simple_show_mem(void){
     send(tot, pagesize);
 }
 
-static void 
+static void
 extended_show_mem(void){
     memory_ext me;
     unsigned long ps;
-    
+
     get_extended_mem(&me);
     ps = me.pagesize;
-   
+
     if (me.flag & F_MEM_TOTAL)  { send_tag(MEM_TOTAL);        send(me.total, ps);      }
     if (me.flag & F_MEM_FREE)   { send_tag(MEM_FREE);         send(me.free, ps);       }
 
@@ -552,11 +554,11 @@ extended_show_mem(void){
     if (me.flag & F_MEM_BUFFERS){ send_tag(MEM_BUFFERS);      send(me.buffered, ps);   }
     if (me.flag & F_MEM_CACHED) { send_tag(MEM_CACHED);       send(me.cached, ps);     }
     if (me.flag & F_MEM_SHARED) { send_tag(MEM_SHARED);       send(me.shared, ps);     }
-    
+
     /* swap */
     if (me.flag & F_SWAP_TOTAL) { send_tag(SWAP_TOTAL);       send(me.total_swap, ps); }
     if (me.flag & F_SWAP_FREE)  { send_tag(SWAP_FREE);        send(me.free_swap, ps);  }
-    
+
 #ifdef VXWORKS
     send_tag(SM_SYSTEM_TOTAL);
     send(latest_system_total, 1);
@@ -569,14 +571,14 @@ extended_show_mem(void){
     if (me.flag & F_MEM_TOTAL)  { send_tag(MEM_SYSTEM_TOTAL); send(me.total, ps);     }
 #endif
     send_tag(SHOW_SYSTEM_MEM_END);
-}    
+}
 
 static void
 message_loop(int erlin_fd)
 {
     char cmdLen, cmd;
     int res;
-    
+
     while (1){
 	/*
 	 *  Wait for command from Erlang
@@ -589,7 +591,7 @@ message_loop(int erlin_fd)
 	if (res == 1) {		/* Exactly one byte read ? */
 	    if (cmdLen == 1){	/* Should be! */
 		switch (read(erlin_fd, &cmd, 1)){
-		case 1:	  
+		case 1:
 		    switch (cmd){
 		    case SHOW_MEM:
 			simple_show_mem();
@@ -601,7 +603,7 @@ message_loop(int erlin_fd)
 			break;
 		    }
 		  break;
-		  
+
 		case 0:
 		  print_error("Erlang has closed.");
 		  return;

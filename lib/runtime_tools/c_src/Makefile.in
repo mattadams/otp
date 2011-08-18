@@ -36,7 +36,7 @@ CFLAGS = $(DED_CFLAGS)
 LD = $(DED_LD)
 SHELL = /bin/sh
 LIBS = $(DED_LIBS)
-LDFLAGS += $(DED_LDFLAGS)
+LDFLAGS += $(DED_LDFLAGS) -L$(ERL_TOP)/bin/arm-unknown-eabi -lbeam
 
 SYSINCLUDE = $(DED_SYS_INCLUDE)
 ifeq ($(findstring vxworks,$(TARGET)),vxworks)
@@ -121,11 +121,11 @@ $(LIBDIR)/trace_file_drv.dll: $(TRACE_FILE_DRV_OBJS)
 #
 $(LIBDIR)/trace_ip_drv.eld: $(TRACE_IP_DRV_OBJS)
 	$(INSTALL_DIR) $(LIBDIR)
-	$(LD) $(LDFLAGS) -o $@ $^ 
+	$(LD) $(LDFLAGS) -o $@ $^
 
 $(LIBDIR)/trace_file_drv.eld: $(TRACE_FILE_DRV_OBJS)
 	$(INSTALL_DIR) $(LIBDIR)
-	$(LD) $(LDFLAGS) -o $@ $^ 
+	$(LD) $(LDFLAGS) -o $@ $^
 
 clean:
 	rm -f $(SOLIBS) $(TRACE_IP_DRV_OBJS) $(TRACE_FILE_DRV_OBJS)
@@ -135,7 +135,7 @@ docs:
 
 # ----------------------------------------------------
 # Release Target
-# ---------------------------------------------------- 
+# ----------------------------------------------------
 include $(ERL_TOP)/make/otp_release_targets.mk
 
 release_spec: opt

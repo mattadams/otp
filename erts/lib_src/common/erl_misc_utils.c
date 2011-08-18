@@ -755,7 +755,7 @@ adjust_processor_nodes(erts_cpu_info_t *cpuinfo, int no_nodes)
 }
 
 
-#ifdef __linux__
+#if (defined(__linux__) && !defined(ANDROID_ARM))
 
 static int
 read_file(char *path, char *buf, int size)

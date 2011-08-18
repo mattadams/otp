@@ -72,7 +72,7 @@ ENABLE_ALLOC_TYPE_VARS += purecov
 else
 
 ifeq ($(TYPE),gcov)
-PURIFY = 
+PURIFY =
 TYPEMARKER = .gcov
 TYPE_FLAGS = @DEBUG_CFLAGS@ -DERTS_GCOV -DNO_JUMP_TABLE -fprofile-arcs -ftest-coverage -O0 -DERTS_CAN_INLINE=0 -DERTS_INLINE=
 ifneq ($(findstring solaris,$(TARGET)),solaris)
@@ -82,14 +82,14 @@ ENABLE_ALLOC_TYPE_VARS += debug
 else
 
 ifeq ($(TYPE),valgrind)
-PURIFY = 
+PURIFY =
 TYPEMARKER = .valgrind
 TYPE_FLAGS = @DEBUG_CFLAGS@ -DVALGRIND -DNO_JUMP_TABLE -DERTS_MSEG_FAKE_SEGMENTS
 ENABLE_ALLOC_TYPE_VARS += valgrind
 else
 
 ifeq ($(TYPE),gprof)
-PURIFY = 
+PURIFY =
 TYPEMARKER = .gprof
 TYPE_FLAGS = @CFLAGS@ -DGPROF -pg -DERTS_CAN_INLINE=0 -DERTS_INLINE=
 LDFLAGS += -pg
@@ -98,7 +98,7 @@ NO_INLINE_FUNCTIONS=true
 else
 
 ifeq ($(TYPE),lcnt)
-PURIFY = 
+PURIFY =
 TYPEMARKER = .lcnt
 TYPE_FLAGS = @CFLAGS@ -DERTS_ENABLE_LOCK_COUNT
 else
@@ -235,7 +235,7 @@ UNROLL_FLG = -funroll-loops
 else
 ifeq ($(TARGET), win32)
 GEN_OPT_FLGS = $(OPT_LEVEL)
-UNROLL_FLG = 
+UNROLL_FLG =
 RC=rc.sh
 ifeq ($(USING_MINGW), yes)
 RES_EXT=@OBJEXT@
@@ -244,8 +244,8 @@ else
 RES_EXT=res
 endif
 else
-GEN_OPT_FLGS = 
-UNROLL_FLG = 
+GEN_OPT_FLGS =
+UNROLL_FLG =
 RC=false
 endif
 endif
@@ -255,11 +255,11 @@ ifdef PURIFY_CHILD_SETUP
 CS_PURIFY = $(PURIFY)
 CS_TYPE_FLAGS = $(TYPE_FLAGS)
 else
-CS_PURIFY = 
+CS_PURIFY =
 CS_TYPE_FLAGS = $(subst QUANTIFY,FAKE_QUANTIFY, \
 		$(subst PURIFY,FAKE_PURIFY, $(TYPE_FLAGS)))
 endif
-CS_CFLAGS_ = $(CS_TYPE_FLAGS) @DEFS@ $(WFLAGS) 
+CS_CFLAGS_ = $(CS_TYPE_FLAGS) @DEFS@ $(WFLAGS)
 ifeq ($(GCC),yes)
 CS_CFLAGS = $(subst -O2, $(GEN_OPT_FLGS) $(UNROLL_FLG), $(CS_CFLAGS_))
 else
@@ -362,7 +362,12 @@ EMULATOR_EXECUTABLE_ELIB = beam.elib$(TF_MARKER)
 ifeq ($(TARGET), win32)
 EMULATOR_EXECUTABLE = beam$(TF_MARKER).dll
 else
+ifeq ($(CC), agcc)
+EMULATOR_EXECUTABLE = libbeam$(TF_MARKER).so
+EMULATOR_EXECUTABLE_REG = beam$(TF_MARKER)
+else
 EMULATOR_EXECUTABLE = beam$(TF_MARKER)
+endif
 endif
 CS_EXECUTABLE = child_setup$(TYPEMARKER)
 
@@ -382,7 +387,11 @@ ifeq ($(FLAVOR)-@ERTS_BUILD_SMP_EMU@,smp-no)
 all:
 	@echo '*** Omitted build of emulator with smp support'
 else
+ifeq ($(CC), agcc)
+all: generate erts_lib zlib pcre $(BINDIR)/$(EMULATOR_EXECUTABLE) $(BINDIR)/$(EMULATOR_EXECUTABLE_REG) $(UNIX_ONLY_BUILDS)
+else
 all: generate erts_lib zlib pcre $(BINDIR)/$(EMULATOR_EXECUTABLE) $(UNIX_ONLY_BUILDS)
+endif
 ifeq ($(OMIT_OMIT_FP),yes)
 	@echo '* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *'
 	@echo '* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *'
@@ -455,6 +464,7 @@ release_spec: all
 	$(INSTALL_DATA) $(RELEASE_INCLUDES) $(RELEASE_PATH)/usr/include
 	$(INSTALL_DATA) $(RELEASE_INCLUDES) $(RELSYSDIR)/include
 	$(INSTALL_PROGRAM) $(BINDIR)/$(EMULATOR_EXECUTABLE) $(RELSYSDIR)/bin
+	$(INSTALL_PROGRAM) $(BINDIR)/$(EMULATOR_EXECUTABLE_REG) $(RELSYSDIR)/bin
 ifeq ($(ERLANG_OSTYPE), unix)
 	$(INSTALL_PROGRAM) $(BINDIR)/$(CS_EXECUTABLE) $(RELSYSDIR)/bin
 endif
@@ -550,7 +560,7 @@ $(TTF_DIR)/driver_tab.c: Makefile.in
 	LANG=C $(PERL) utils/make_driver_tab -o $@ $(DRV_OBJS)
 
 # Preloaded code.
-# 
+#
 # This list must be consistent with PRE_LOADED_MODULES in
 # lib/kernel/src/Makefile.
 ifeq ($(TARGET),win32)
@@ -580,7 +590,7 @@ endif
 #
 COMMON_INCLUDES = -Ibeam -Isys/$(ERLANG_OSTYPE) -Isys/common -I$(TARGET)
 ifndef Z_LIB
-COMMON_INCLUDES += -Izlib 
+COMMON_INCLUDES += -Izlib
 endif
 COMMON_INCLUDES += -Ipcre -Ihipe
 COMMON_INCLUDES += -I../include -I../include/$(TARGET)
@@ -607,7 +617,7 @@ $(OBJDIR)/dll_sys.o: sys/$(ERLANG_OSTYPE)/sys.c
 	$(CC) $(CFLAGS) -DERL_RUN_SHARED_LIB=1 $(INCLUDES) -c $< -o $@
 
 $(OBJDIR)/beams.$(RES_EXT): $(TARGET)/beams.rc
-	$(RC) -o $@  -I$(ERL_TOP)/erts/etc/win32 $(TARGET)/beams.rc 
+	$(RC) -o $@  -I$(ERL_TOP)/erts/etc/win32 $(TARGET)/beams.rc
 
 endif
 
@@ -771,7 +781,7 @@ OS_OBJS = \
 	$(OBJDIR)/elib_memmove.o
 
 ifeq ($(findstring vxworks,$(TARGET)),vxworks)
-	OS_OBJS += $(OBJDIR)/int64.o 
+	OS_OBJS += $(OBJDIR)/int64.o
 else
 	OS_OBJS += $(OBJDIR)/sys_float.o \
                    $(OBJDIR)/sys_time.o
@@ -904,9 +914,9 @@ $(OBJDIR)/int64.o: $(TARGET)/int64.c
 $(TARGET)/int64.c:
 	echo 'void dummy(void); void dummy(void) {' > $(TARGET)/int64.c
 	for x in $(NEEDFUNCTIONS); do echo 'extern void '$$x'();' \
-		>> $(TARGET)/int64.c; done 
+		>> $(TARGET)/int64.c; done
 	for x in $(NEEDFUNCTIONS); do echo $$x'();' >> $(TARGET)/int64.c; done
-	echo '}'  >> $(TARGET)/int64.c 
+	echo '}'  >> $(TARGET)/int64.c
 
 endif
 
@@ -920,13 +930,32 @@ $(BINDIR)/$(EMULATOR_EXECUTABLE): $(INIT_OBJS) $(OBJS) $(DEPLIBS)
 	$(LDFLAGS) $(DEXPORT) $(INIT_OBJS) $(OBJS) $(LIBS)
 else
 
+ifeq ($(CC), agcc)
+$(BINDIR)/$(EMULATOR_EXECUTABLE): $(INIT_OBJS) $(OBJS) $(DEPLIBS)
+	$(PURIFY) $(LD) -o $(BINDIR)/$(EMULATOR_EXECUTABLE) \
+	$(HIPEBEAMLDFLAGS) $(LDFLAGS) $(DEXPORT) $(INIT_OBJS) $(OBJS) $(LIBS) -shared
 
+$(OBJDIR)/beam.o:
+	$(CC) $(CFLAGS) $(INCLUDES) -c beam/beam.c -o $(OBJDIR)/beam.o
+
+$(BINDIR)/$(EMULATOR_EXECUTABLE_REG): $(OBJDIR)/beam.o
+	$(PURIFY) $(LD) -o $(BINDIR)/$(EMULATOR_EXECUTABLE_REG) \
+	$(HIPEBEAMLDFLAGS) $(LDFLAGS) $(DEXPORT) $(OBJDIR)/beam.o $(LIBS) -L$(BINDIR) -lbeam
+else
 $(BINDIR)/$(EMULATOR_EXECUTABLE): $(INIT_OBJS) $(OBJS) $(DEPLIBS)
 	$(PURIFY) $(LD) -o $(BINDIR)/$(EMULATOR_EXECUTABLE) \
 	$(HIPEBEAMLDFLAGS) $(LDFLAGS) $(DEXPORT) $(INIT_OBJS) $(OBJS) $(LIBS)
-
 endif
 
+$(BINDIR)/$(EMULATOR_EXECUTABLE_ELIB): $(INIT_OBJS) $(OBJS_ELIB) $(DEPLIBS)
+	$(PURIFY) $(LD) -o $(BINDIR)/$(EMULATOR_EXECUTABLE_ELIB) \
+	$(LDFLAGS) $(DEXPORT) $(INIT_OBJS) $(OBJS_ELIB) $(LIBS)
+
+$(BINDIR)/$(EMULATOR_EXECUTABLE_SAE): $(INIT_OBJS_SAE) $(OBJS_SAE) $(DEPLIBS)
+	$(PURIFY) $(LD) -o $(BINDIR)/$(EMULATOR_EXECUTABLE_SAE) \
+	$(LDFLAGS) $(DEXPORT) $(INIT_OBJS_SAE) $(OBJS_SAE) $(LIBS)
+
+endif
 #
 # Create directories
 #
@@ -978,7 +1007,7 @@ DRV_SRC=$(wildcard drivers/common/*.c) $(wildcard drivers/$(ERLANG_OSTYPE)/*.c)
 ALL_SYS_SRC=$(wildcard sys/$(ERLANG_OSTYPE)/*.c) $(wildcard sys/common/*.c)
 TARGET_SRC=$(wildcard $(TARGET)/*.c) $(wildcard $(TTF_DIR)/*.c)
 
-# I do not want the -MG flag on windows, it does not work properly for a 
+# I do not want the -MG flag on windows, it does not work properly for a
 # windows build.
 
 ifeq ($(TARGET),win32)

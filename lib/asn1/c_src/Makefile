@@ -53,7 +53,7 @@ EI_LIBDIR = $(ERL_TOP)/lib/erl_interface/obj$(TYPEMARKER)/$(TARGET)
 # ----------------------------------------------------
 EI_INCLUDES = -I$(ERL_TOP)/lib/erl_interface/include
 CFLAGS = $(DED_INCLUDES) $(EI_INCLUDES) $(DED_CFLAGS)
-LDFLAGS += $(DED_LDFLAGS)
+LDFLAGS += $(DED_LDFLAGS) -L$(ERL_TOP)/bin/arm-unknown-eabi -lbeam
 
 LD_INCL_EI = -L$(EI_LIBDIR)
 
@@ -65,13 +65,13 @@ C_FILES = asn1_erl_driver.c
 
 
 ifeq ($(TARGET),win32)
-LD_EI = -lei_md 
+LD_EI = -lei_md
 SHARED_OBJ_FILES = $(LIBDIR)/asn1_erl_drv.dll
 OBJ_FILES = $(OBJDIR)/asn1_erl_drv.o
 CLIB_FLAGS =
 LN=cp
 else
-LD_EI = -lei 
+LD_EI = -lei
 OBJ_FILES = $(OBJDIR)/asn1_erl_drv.o
 ifeq ($(findstring vxworks,$(TARGET)),vxworks)
 SHARED_OBJ_FILES = $(LIBDIR)/asn1_erl_drv.eld
@@ -92,7 +92,7 @@ opt: $(OBJDIR) $(LIBDIR) $(SHARED_OBJ_FILES)
 debug: opt
 
 clean:
-	rm -f core *~ 
+	rm -f core *~
 	rm -f $(LIBDIR)/*
 	rm -f $(OBJDIR)/*
 
@@ -104,10 +104,10 @@ docs:
 
 
 $(OBJ_FILES): $(C_FILES)
-	$(CC) -c $(CFLAGS) -o $(OBJ_FILES) $(C_FILES) 
+	$(CC) -c $(CFLAGS) -o $(OBJ_FILES) $(C_FILES)
 
 $(SHARED_OBJ_FILES): $(OBJ_FILES)
-	$(LD) $(LDFLAGS) $(LD_INCL_EI) -o $(SHARED_OBJ_FILES) $(OBJ_FILES) $(LD_EI) $(CLIB_FLAGS) $(LIBS) 
+	$(LD) $(LDFLAGS) $(LD_INCL_EI) -o $(SHARED_OBJ_FILES) $(OBJ_FILES) $(LD_EI) $(CLIB_FLAGS) $(LIBS)
 
 $(LIBDIR):
 	-mkdir -p $(LIBDIR)
@@ -116,7 +116,7 @@ $(OBJDIR):
 	-mkdir -p $(OBJDIR)
 
 
- 
+
 # ----------------------------------------------------
 # Release Target
 # ----------------------------------------------------

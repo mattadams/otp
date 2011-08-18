@@ -1,22 +1,22 @@
 /*
  * %CopyrightBegin%
- * 
+ *
  * Copyright Ericsson AB 1997-2011. All Rights Reserved.
- * 
+ *
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
  * compliance with the License. You should have received a copy of the
  * Erlang Public License along with this software. If not, it can be
  * retrieved online at http://www.erlang.org/.
- * 
+ *
  * Software distributed under the License is distributed on an "AS IS"
  * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
  * the License for the specific language governing rights and limitations
  * under the License.
- * 
+ *
  * %CopyrightEnd%
  */
-/* 
+/*
  * Interface functions to different versions of gethostbyname
  */
 
@@ -47,14 +47,14 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/param.h>
-#endif 
+#endif
 
 /* common to all platforms */
 #include "eidef.h"
 #include "ei_resolve.h"
 #include "ei_locking.h"
 
-#ifdef HAVE_GETHOSTBYNAME_R
+#if (defined(HAVE_GETHOSTBYNAME_R) && !defined(ANDROID_ARM))
 
 void ei_init_resolve(void)
 {
@@ -110,7 +110,7 @@ void ei_init_resolve(void)
   SYM_TYPE symtype;
 
   if (symFindByName(sysSymTbl,"resolvGetHostByName",
-		    (char **)&sym,&symtype) == OK && 
+		    (char **)&sym,&symtype) == OK &&
       verify_dns_configuration()) {
       sens_gethostbyname = sym;
       DEBUGF((stderr,"found SENS resolver - using it for gethostbyname()\n"));
@@ -143,9 +143,9 @@ void ei_init_resolve(void)
 ** Function to verify the DNS configuration on VwXorks SENS.
 ** Actually configures to a default value if unconfigured...
 */
-static int verify_dns_configuration(void) 
+static int verify_dns_configuration(void)
 {
-    /* FIXME problem for threaded ? */ 
+    /* FIXME problem for threaded ? */
     static char resolv_params[sizeof(RESOLV_PARAMS_S)];
     void (*rpg)(char *);
     STATUS (*rps)(char *);
@@ -171,14 +171,14 @@ static int verify_dns_configuration(void)
     return 0;
 }
 
-#endif    
+#endif
 
-/* 
+/*
  * Copy the contents of one struct hostent to another, i.e. don't just
  * copy the pointers, copy all the data and create new pointers, etc.
  * User must provide a secondary buffer to which the host data can be copied.
  *
- * Returns 0 on success or -1 if buffer is too small for host data 
+ * Returns 0 on success or -1 if buffer is too small for host data
 */
 
 /* a couple of helpers
@@ -221,16 +221,16 @@ static int copy_hostent(struct hostent *dest, const struct hostent *src, char *b
   align_buf(buffer, buflen);
   pptr = (char **)buffer;
   dest->h_aliases = pptr;          /* save head of pointer array */
-  
+
   src_aliases = src->h_aliases;
-  
+
   while(*(src_aliases)) {
     if (buflen < sizeof(*pptr)) return -1;
     *pptr = src_aliases;
     advance_buf(buffer,buflen,sizeof(*pptr));
     src_aliases++;
     pptr++;
-  }  
+  }
   if (buflen < sizeof(*pptr)) return -1;
   *pptr = NULL;
   advance_buf(buffer,buflen,sizeof(*pptr));
@@ -251,16 +251,16 @@ static int copy_hostent(struct hostent *dest, const struct hostent *src, char *b
   align_buf(buffer, buflen);
   pptr = (char **)buffer;
   dest->h_addr_list = pptr;        /* save head of pointer array */
-  
+
   src_addr_list = src->h_addr_list;
-  
+
   while(*(src_addr_list)) {
     if (buflen < sizeof(*pptr)) return -1;
     *pptr = *src_addr_list;
     advance_buf(buffer,buflen,sizeof(*pptr));
     src_addr_list++;
     pptr++;
-  }  
+  }
   if (buflen < sizeof(*pptr)) return -1;
   *pptr = NULL;
   advance_buf(buffer,buflen,sizeof(*pptr));
@@ -285,7 +285,7 @@ static int copy_hostent(struct hostent *dest, const struct hostent *src, char *b
 /* This function is a pseudo-reentrant version of gethostbyname(). It
  * uses locks to serialize the call to the regular (non-reentrant)
  * gethostbyname() and then copies the data into the user-provided
- * buffers. It's not pretty but it works. 
+ * buffers. It's not pretty but it works.
  *
  * name - name of host to look up
  * hostp - user-supplied structure for returning host entry
@@ -294,13 +294,13 @@ static int copy_hostent(struct hostent *dest, const struct hostent *src, char *b
  * h_errnop - buffer for return status
  *
  * Returns values as for gethostbyname(). Additionally, sets
- * errno=ERANGE and returns NULL if buffer is too small for host data. 
+ * errno=ERANGE and returns NULL if buffer is too small for host data.
  */
 
-static struct hostent *my_gethostbyname_r(const char *name, 
-					  struct hostent *hostp, 
-					  char *buffer, 
-					  int buflen, 
+static struct hostent *my_gethostbyname_r(const char *name,
+					  struct hostent *hostp,
+					  char *buffer,
+					  int buflen,
 					  int *h_errnop)
 {
   struct hostent dest;
@@ -308,7 +308,7 @@ static struct hostent *my_gethostbyname_r(const char *name,
   struct hostent *rval = NULL;
 
   /* FIXME this should have been done in 'erl'_init()? */
-  if (!ei_resolve_initialized) ei_init_resolve(); 
+  if (!ei_resolve_initialized) ei_init_resolve();
 
 #ifdef _REENTRANT
   /* === BEGIN critical section === */
@@ -322,12 +322,12 @@ static struct hostent *my_gethostbyname_r(const char *name,
   if ((src = ei_gethostbyname(name))) {
     /* copy to caller's buffer */
     if (!copy_hostent(&dest,src,buffer,buflen)) {
-      /* success */ 
-      *hostp = dest;               
+      /* success */
+      *hostp = dest;
       *h_errnop = 0;
       rval = hostp;
     }
-    
+
     else {
       /* failure - buffer size */
 #ifdef __WIN32__
@@ -338,7 +338,7 @@ static struct hostent *my_gethostbyname_r(const char *name,
       *h_errnop = 0;
     }
   }
-  
+
   else {
     /* failure - lookup */
 #ifdef __WIN32__
@@ -356,11 +356,11 @@ static struct hostent *my_gethostbyname_r(const char *name,
 }
 
 static struct hostent *my_gethostbyaddr_r(const char *addr,
-					  int length, 
-					  int type, 
+					  int length,
+					  int type,
 					  struct hostent *hostp,
-					  char *buffer,  
-					  int buflen, 
+					  char *buffer,
+					  int buflen,
 					  int *h_errnop)
 {
   struct hostent dest;
@@ -383,7 +383,7 @@ static struct hostent *my_gethostbyaddr_r(const char *addr,
     /* copy to caller's buffer */
     if (!copy_hostent(&dest,src,buffer,buflen)) {
       /* success */
-      *hostp = dest;                
+      *hostp = dest;
       *h_errnop = 0;
       rval = hostp;
     }
@@ -462,7 +462,7 @@ static struct hostent *my_gethostbyname(const char *name)
   h.h_addrtype = AF_INET;
   addrp[0] = (char *)&addr;
   h.h_addr_list = addrp;
-  
+
   return &h;
 }
 
@@ -476,12 +476,12 @@ static struct hostent *my_gethostbyaddr(const char *addr, int len, int type)
   static char *addrp[2] = {(char *)&inaddr, NULL};
 
   memmove(&inaddr,addr,sizeof(inaddr));
-  
+
   if ((hostGetByAddr(inaddr,hostname)) == ERROR) {
     h_errno = HOST_NOT_FOUND;
     return NULL;
   }
-  
+
   h_errno = 0;
   h.h_name = hostname;
   h.h_aliases = aliases;
@@ -496,7 +496,7 @@ static struct hostent *my_gethostbyaddr(const char *addr, int len, int type)
 struct hostent *ei_gethostbyname(const char *name)
 {
   struct hostent *h = NULL;
-  
+
   if (!sens_gethostbyname) {
     h = my_gethostbyname(name);
   }
@@ -512,8 +512,8 @@ struct hostent *ei_gethostbyname(const char *name)
 struct hostent *ei_gethostbyaddr(const char *addr, int len, int type)
 {
   struct hostent *h = NULL;
-  
-  if (!sens_gethostbyaddr) { 
+
+  if (!sens_gethostbyaddr) {
     h = my_gethostbyaddr(addr,len,type);
   }
   else {
@@ -526,15 +526,15 @@ struct hostent *ei_gethostbyaddr(const char *addr, int len, int type)
 }
 
 struct hostent *ei_gethostbyaddr_r(const char *addr,
-				int length, 
-				int type, 
+				int length,
+				int type,
 				struct hostent *hostp,
-				char *buffer,  
-				int buflen, 
+				char *buffer,
+				int buflen,
 				int *h_errnop)
 {
   struct hostent *h = NULL;
-  
+
   /* use own func if sens function not available */
   if (!sens_gethostbyaddr) {
     h = my_gethostbyaddr_r(addr,length,type,hostp,buffer,buflen,h_errnop);
@@ -542,25 +542,25 @@ struct hostent *ei_gethostbyaddr_r(const char *addr,
   else {
     if (!(h = sens_gethostbyaddr(addr,buffer,buflen))) {
       /* sens returns status via errno */
-      *h_errnop = errno; 
+      *h_errnop = errno;
     }
     else {
       *hostp = *h;
       *h_errnop = 0;
     }
   }
-      
+
   return h;
 }
 
-struct hostent *ei_gethostbyname_r(const char *name, 
-				    struct hostent *hostp, 
-				    char *buffer, 
-				    int buflen, 
+struct hostent *ei_gethostbyname_r(const char *name,
+				    struct hostent *hostp,
+				    char *buffer,
+				    int buflen,
 				    int *h_errnop)
 {
   struct hostent *h = NULL;
-  
+
   /* use own func if sens function not available */
   if (!sens_gethostbyname) {
     h = my_gethostbyname_r(name,hostp,buffer,buflen,h_errnop);
@@ -568,14 +568,14 @@ struct hostent *ei_gethostbyname_r(const char *name,
   else {
     if (!(h = sens_gethostbyname(name,buffer,buflen))) {
       /* sens returns status via errno */
-      *h_errnop = errno; 
+      *h_errnop = errno;
     }
     else {
       *hostp = *h;
       *h_errnop = 0;
     }
   }
-      
+
   return h;
 }
 
@@ -592,16 +592,16 @@ struct hostent *ei_gethostbyaddr(const char *addr, int len, int type)
 }
 
 struct hostent *ei_gethostbyaddr_r(const char *addr,
-				int length, 
-				int type, 
+				int length,
+				int type,
 				struct hostent *hostp,
-				char *buffer,  
-				int buflen, 
+				char *buffer,
+				int buflen,
 				int *h_errnop)
 {
 #if (EI_THREADS == false)
   /* threads disabled, no need to call reentrant function */
-  return gethostbyaddr(addr, length, type); 
+  return gethostbyaddr(addr, length, type);
 #else
 #ifndef HAVE_GETHOSTBYNAME_R
   return my_gethostbyaddr_r(addr,length,type,hostp,buffer,buflen,h_errnop);
@@ -620,17 +620,17 @@ struct hostent *ei_gethostbyaddr_r(const char *addr,
 #endif
 }
 
-struct hostent *ei_gethostbyname_r(const char *name, 
-				    struct hostent *hostp, 
-				    char *buffer, 
-				    int buflen, 
+struct hostent *ei_gethostbyname_r(const char *name,
+				    struct hostent *hostp,
+				    char *buffer,
+				    int buflen,
 				    int *h_errnop)
 {
 #ifndef _REENTRANT
   /* threads disabled, no need to call reentrant function */
   return gethostbyname(name);
 #else
-#ifndef HAVE_GETHOSTBYNAME_R
+#if (defined(HAVE_GETHOSTBYNAME_R) && defined(ANDROID_ARM))
   return my_gethostbyname_r(name,hostp,buffer,buflen,h_errnop);
 #else
 #if (defined(__GLIBC__) || (__FreeBSD_version >= 602000) || defined(__DragonFly__))

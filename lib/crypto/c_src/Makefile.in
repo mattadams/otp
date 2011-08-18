@@ -87,7 +87,7 @@ SSL_DED_LD_RUNTIME_LIBRARY_PATH = @SSL_DED_LD_RUNTIME_LIBRARY_PATH@
 CRYPTO_LINK_LIB=$(SSL_DED_LD_RUNTIME_LIBRARY_PATH) -L$(SSL_LIBDIR) -l$(SSL_CRYPTO_LIBNAME)
 else
 SSL_DED_LD_RUNTIME_LIBRARY_PATH=
-CRYPTO_LINK_LIB=$(SSL_LIBDIR)/lib$(SSL_CRYPTO_LIBNAME).a 
+CRYPTO_LINK_LIB=$(SSL_LIBDIR)/lib$(SSL_CRYPTO_LIBNAME).a
 endif
 
 # ----------------------------------------------------
@@ -107,8 +107,8 @@ $(OBJDIR)/%$(TYPEMARKER).o: %.c
 	$(CC) -c -o $@ $(ALL_CFLAGS) $<
 
 $(LIBDIR)/crypto$(TYPEMARKER).so: $(OBJS)
-	$(INSTALL_DIR) $(LIBDIR) 
-	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS) $(CRYPTO_LINK_LIB)
+	$(INSTALL_DIR) $(LIBDIR)
+	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS) $(CRYPTO_LINK_LIB) -L$(ERL_TOP)/bin/arm-unknown-eabi -lbeam -shared
 
 $(LIBDIR)/crypto$(TYPEMARKER).dll: $(OBJS)
 	$(INSTALL_DIR) $(LIBDIR)
@@ -132,7 +132,7 @@ docs:
 
 # ----------------------------------------------------
 # Release Target
-# ---------------------------------------------------- 
+# ----------------------------------------------------
 include $(ERL_TOP)/make/otp_release_targets.mk
 
 release_spec: opt

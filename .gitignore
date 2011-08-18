@@ -369,3 +369,7 @@ make/win32/
 /lib/xmerl/test/xmerl_test.erl
 /lib/erl_interface/config.h.in
 /lib/configure.in
+
+# android
+
+arm-unknown-eabi

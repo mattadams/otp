@@ -1,4 +1,4 @@
-/* 
+/*
  * %CopyrightBegin%
  *
  * Copyright Ericsson AB 2010-2011. All Rights Reserved.
@@ -18,8 +18,8 @@
  */
 
 /*
- * Purpose:  Dynamically loadable NIF library for cryptography. 
- * Based on OpenSSL. 
+ * Purpose:  Dynamically loadable NIF library for cryptography.
+ * Based on OpenSSL.
  */
 
 #ifdef __WIN32__
@@ -48,7 +48,9 @@
 #include <openssl/objects.h>
 #include <openssl/rc4.h>
 #include <openssl/rc2.h>
-#include <openssl/blowfish.h>
+#ifndef ANDROID_ARM
+ #include <openssl/blowfish.h>
+#endif
 #include <openssl/rand.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
@@ -161,10 +163,10 @@ static ERL_NIF_TERM dh_generate_parameters_nif(ErlNifEnv* env, int argc, const E
 static ERL_NIF_TERM dh_check(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM dh_generate_key_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM dh_compute_key_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
-static ERL_NIF_TERM bf_cfb64_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+/*static ERL_NIF_TERM bf_cfb64_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM bf_cbc_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM bf_ecb_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
-static ERL_NIF_TERM blowfish_ofb64_encrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM blowfish_ofb64_encrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);*/
 
 
 /* openssl callbacks */
@@ -181,10 +183,10 @@ static void dyn_destroy_function(struct CRYPTO_dynlock_value *ptr,
 
 /* helpers */
 static void hmac_md5(unsigned char *key, int klen,
-		     unsigned char *dbuf, int dlen, 
+		     unsigned char *dbuf, int dlen,
 		     unsigned char *hmacbuf);
 static void hmac_sha1(unsigned char *key, int klen,
-		      unsigned char *dbuf, int dlen, 
+		      unsigned char *dbuf, int dlen,
 		      unsigned char *hmacbuf);
 
 static int library_refc = 0; /* number of users of this dynamic library */
@@ -238,11 +240,13 @@ static ErlNifFunc nif_funcs[] = {
     {"dh_generate_parameters_nif", 2, dh_generate_parameters_nif},
     {"dh_check", 1, dh_check},
     {"dh_generate_key_nif", 2, dh_generate_key_nif},
-    {"dh_compute_key_nif", 3, dh_compute_key_nif},
-    {"bf_cfb64_crypt", 4, bf_cfb64_crypt},
+    {"dh_compute_key_nif", 3, dh_compute_key_nif}
+#ifndef ANDROID_ARM
+    ,{"bf_cfb64_crypt", 4, bf_cfb64_crypt},
     {"bf_cbc_crypt", 4, bf_cbc_crypt},
     {"bf_ecb_crypt", 3, bf_ecb_crypt},
     {"blowfish_ofb64_encrypt", 3, blowfish_ofb64_encrypt}
+#endif
 };
 
 ERL_NIF_INIT(crypto,nif_funcs,load,reload,upgrade,unload)
@@ -290,16 +294,16 @@ static int is_ok_load_info(ErlNifEnv* env, ERL_NIF_TERM load_info)
     return enif_get_int(env,load_info,&i) && i == 101;
 }
 static void* crypto_alloc(size_t size)
-{   
+{
     return enif_alloc(size);
 }
 static void* crypto_realloc(void* ptr, size_t size)
 {
     return enif_realloc(ptr, size);
-}   
+}
 static void crypto_free(void* ptr)
-{   
-    enif_free(ptr); 
+{
+    enif_free(ptr);
 }
 
 static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
@@ -358,7 +362,7 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 }
 
 static int reload(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
-{   
+{
     if (*priv_data != NULL) {
 	return -1; /* Don't know how to do that */
     }
@@ -370,7 +374,7 @@ static int reload(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     if (!is_ok_load_info(env, load_info)) {
 	return -1;
     }
-    return 0;    
+    return 0;
 }
 
 static int upgrade(ErlNifEnv* env, void** priv_data, void** old_priv_data,
@@ -416,7 +420,7 @@ static ERL_NIF_TERM info_lib(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]
     unsigned ver_sz = strlen(ver);
     ERL_NIF_TERM name_term, ver_term;
 
-    memcpy(enif_make_new_binary(env, name_sz, &name_term), libname, name_sz);    
+    memcpy(enif_make_new_binary(env, name_sz, &name_term), libname, name_sz);
     memcpy(enif_make_new_binary(env, ver_sz, &ver_term), ver, ver_sz);
 
     return enif_make_list1(env, enif_make_tuple3(env, name_term,
@@ -437,7 +441,7 @@ static ERL_NIF_TERM md5(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     return ret;
 }
 static ERL_NIF_TERM md5_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* () */   
+{/* () */
     ERL_NIF_TERM ret;
     MD5_Init((MD5_CTX *) enif_make_new_binary(env, MD5_CTX_LEN, &ret));
     return ret;
@@ -460,8 +464,8 @@ static ERL_NIF_TERM md5_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
 static ERL_NIF_TERM md5_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {/* (Context) */
     ErlNifBinary ctx_bin;
-    MD5_CTX ctx_clone; 
-    ERL_NIF_TERM ret;    
+    MD5_CTX ctx_clone;
+    ERL_NIF_TERM ret;
     if (!enif_inspect_binary(env, argv[0], &ctx_bin) || ctx_bin.size != MD5_CTX_LEN) {
 	return enif_make_badarg(env);
     }
@@ -471,7 +475,7 @@ static ERL_NIF_TERM md5_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
 }
 
 static ERL_NIF_TERM sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* (Data) */    
+{/* (Data) */
     ErlNifBinary ibin;
     ERL_NIF_TERM ret;
 
@@ -483,7 +487,7 @@ static ERL_NIF_TERM sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     return ret;
 }
 static ERL_NIF_TERM sha_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* () */   
+{/* () */
     ERL_NIF_TERM ret;
     SHA1_Init((SHA_CTX *) enif_make_new_binary(env, SHA_CTX_LEN, &ret));
     return ret;
@@ -511,12 +515,12 @@ static ERL_NIF_TERM sha_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
 	return enif_make_badarg(env);
     }
     memcpy(&ctx_clone, ctx_bin.data, SHA_CTX_LEN); /* writable */
-    SHA1_Final(enif_make_new_binary(env, SHA_LEN, &ret), &ctx_clone);    
+    SHA1_Final(enif_make_new_binary(env, SHA_LEN, &ret), &ctx_clone);
     return ret;
 }
 
 static ERL_NIF_TERM md4(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* (Data) */    
+{/* (Data) */
     ErlNifBinary ibin;
     ERL_NIF_TERM ret;
 
@@ -528,7 +532,7 @@ static ERL_NIF_TERM md4(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     return ret;
 }
 static ERL_NIF_TERM md4_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* () */   
+{/* () */
     ERL_NIF_TERM ret;
     MD4_Init((MD4_CTX *) enif_make_new_binary(env, MD4_CTX_LEN, &ret));
     return ret;
@@ -551,12 +555,12 @@ static ERL_NIF_TERM md4_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
 {/* (Context) */
     ErlNifBinary ctx_bin;
     MD4_CTX ctx_clone;
-    ERL_NIF_TERM ret;    
+    ERL_NIF_TERM ret;
     if (!enif_inspect_binary(env, argv[0], &ctx_bin) || ctx_bin.size != MD4_CTX_LEN) {
 	return enif_make_badarg(env);
     }
     memcpy(&ctx_clone, ctx_bin.data, MD4_CTX_LEN); /* writable */
-    MD4_Final(enif_make_new_binary(env, MD4_LEN, &ret), &ctx_clone);    
+    MD4_Final(enif_make_new_binary(env, MD4_LEN, &ret), &ctx_clone);
     return ret;
 }
 
@@ -601,12 +605,12 @@ static ERL_NIF_TERM hmac_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
     ERL_NIF_TERM ret;
     unsigned char * ctx_buf;
     const EVP_MD *md;
-    
+
     if (argv[0] == atom_sha) md = EVP_sha1();
     else if (argv[0] == atom_md5) md = EVP_md5();
     else if (argv[0] == atom_ripemd160) md = EVP_ripemd160();
     else goto badarg;
-    
+
     if (!enif_inspect_iolist_as_binary(env, argv[1], &key)) {
     badarg:
 	return enif_make_badarg(env);
@@ -624,7 +628,7 @@ static ERL_NIF_TERM hmac_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     ErlNifBinary context, data;
     ERL_NIF_TERM ret;
     unsigned char * ctx_buf;
-    
+
     if (!enif_inspect_binary(env, argv[0], &context)
         || !enif_inspect_iolist_as_binary(env, argv[1], &data)
         || context.size != sizeof(HMAC_CTX)) {
@@ -647,7 +651,7 @@ static ERL_NIF_TERM hmac_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
     unsigned char * mac_bin;
     unsigned int req_len = 0;
     unsigned int mac_len;
-    
+
     if (!enif_inspect_binary(env, argv[0], &context)) {
 	return enif_make_badarg(env);
     }
@@ -659,11 +663,11 @@ static ERL_NIF_TERM hmac_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
         return enif_make_badarg(env);
     }
     memcpy(&ctx, context.data, context.size);
-    
+
     HMAC_Final(&ctx, mac_buf, &mac_len);
     HMAC_CTX_cleanup(&ctx);
 
-    if (argc == 2 && req_len < mac_len) { 
+    if (argc == 2 && req_len < mac_len) {
         // Only truncate to req_len bytes if asked.
         mac_len = req_len;
     }
@@ -674,7 +678,7 @@ static ERL_NIF_TERM hmac_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
 }
 
 static ERL_NIF_TERM des_cbc_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* (Key, Ivec, Text, IsEncrypt) */    
+{/* (Key, Ivec, Text, IsEncrypt) */
     ErlNifBinary key, ivec, text;
     DES_key_schedule schedule;
     DES_cblock ivec_clone; /* writable copy */
@@ -710,7 +714,7 @@ static ERL_NIF_TERM des_ecb_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
 }
 
 static ERL_NIF_TERM des_ede3_cbc_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* (Key1, Key2, Key3, IVec, Text/Cipher, IsEncrypt) */    
+{/* (Key1, Key2, Key3, IVec, Text/Cipher, IsEncrypt) */
     ErlNifBinary key1, key2, key3, ivec, text;
     DES_key_schedule schedule1, schedule2, schedule3;
     DES_cblock ivec_clone; /* writable copy */
@@ -729,14 +733,14 @@ static ERL_NIF_TERM des_ede3_cbc_crypt(ErlNifEnv* env, int argc, const ERL_NIF_T
     DES_set_key((const_DES_cblock*)key1.data, &schedule1);
     DES_set_key((const_DES_cblock*)key2.data, &schedule2);
     DES_set_key((const_DES_cblock*)key3.data, &schedule3);
-    DES_ede3_cbc_encrypt(text.data, enif_make_new_binary(env,text.size,&ret), 
+    DES_ede3_cbc_encrypt(text.data, enif_make_new_binary(env,text.size,&ret),
 			 text.size, &schedule1, &schedule2, &schedule3,
 			 &ivec_clone, (argv[5] == atom_true));
     return ret;
 }
 
 static ERL_NIF_TERM aes_cfb_128_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* (Key, IVec, Data, IsEncrypt) */    
+{/* (Key, IVec, Data, IsEncrypt) */
     ErlNifBinary key, ivec, text;
     AES_KEY aes_key;
     unsigned char ivec_clone[16]; /* writable copy */
@@ -753,7 +757,7 @@ static ERL_NIF_TERM aes_cfb_128_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TE
     memcpy(ivec_clone, ivec.data, 16);
     AES_set_encrypt_key(key.data, 128, &aes_key);
     AES_cfb128_encrypt((unsigned char *) text.data,
-		       enif_make_new_binary(env, text.size, &ret), 
+		       enif_make_new_binary(env, text.size, &ret),
 		       text.size, &aes_key, ivec_clone, &new_ivlen,
 		       (argv[3] == atom_true));
     return ret;
@@ -762,7 +766,7 @@ static ERL_NIF_TERM aes_cfb_128_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TE
 /* Common for both encrypt and decrypt
 */
 static ERL_NIF_TERM aes_ctr_encrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* (Key, IVec, Data) */    
+{/* (Key, IVec, Data) */
     ErlNifBinary key, ivec, text;
     AES_KEY aes_key;
     unsigned char ivec_clone[16]; /* writable copy */
@@ -776,10 +780,10 @@ static ERL_NIF_TERM aes_ctr_encrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM
 	|| !enif_inspect_iolist_as_binary(env, argv[2], &text)) {
 	return enif_make_badarg(env);
     }
-    memcpy(ivec_clone, ivec.data, 16);    
+    memcpy(ivec_clone, ivec.data, 16);
     memset(ecount_buf, 0, sizeof(ecount_buf));
     AES_ctr128_encrypt((unsigned char *) text.data,
-		       enif_make_new_binary(env, text.size, &ret), 
+		       enif_make_new_binary(env, text.size, &ret),
 		       text.size, &aes_key, ivec_clone, ecount_buf, &num);
 
     /* To do an incremental {en|de}cryption, the state to to keep between calls
@@ -790,7 +794,7 @@ static ERL_NIF_TERM aes_ctr_encrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM
 /* Initializes state for ctr streaming (de)encryption
 */
 static ERL_NIF_TERM aes_ctr_stream_encrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* ({Key, IVec, ECount, Num}, Data) */    
+{/* ({Key, IVec, ECount, Num}, Data) */
     ErlNifBinary key_bin, ivec_bin, text_bin, ecount_bin;
     AES_KEY aes_key;
     unsigned int num;
@@ -811,14 +815,14 @@ static ERL_NIF_TERM aes_ctr_stream_encrypt(ErlNifEnv* env, int argc, const ERL_N
         return enif_make_badarg(env);
     }
 
-    ivec2_buf = enif_make_new_binary(env, ivec_bin.size, &ivec2_term); 
+    ivec2_buf = enif_make_new_binary(env, ivec_bin.size, &ivec2_term);
     ecount2_buf = enif_make_new_binary(env, ecount_bin.size, &ecount2_term);
-    
+
     memcpy(ivec2_buf, ivec_bin.data, 16);
     memcpy(ecount2_buf, ecount_bin.data, ecount_bin.size);
 
     AES_ctr128_encrypt((unsigned char *) text_bin.data,
-		       enif_make_new_binary(env, text_bin.size, &cipher_term), 
+		       enif_make_new_binary(env, text_bin.size, &cipher_term),
 		       text_bin.size, &aes_key, ivec2_buf, ecount2_buf, &num);
 
     num2_term = enif_make_uint(env, num);
@@ -828,7 +832,7 @@ static ERL_NIF_TERM aes_ctr_stream_encrypt(ErlNifEnv* env, int argc, const ERL_N
 }
 
 static ERL_NIF_TERM rand_bytes_1(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* (Bytes) */     
+{/* (Bytes) */
     unsigned bytes;
     unsigned char* data;
     ERL_NIF_TERM ret;
@@ -841,7 +845,7 @@ static ERL_NIF_TERM rand_bytes_1(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
     return ret;
 }
 static ERL_NIF_TERM strong_rand_bytes_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* (Bytes) */     
+{/* (Bytes) */
     unsigned bytes;
     unsigned char* data;
     ERL_NIF_TERM ret;
@@ -857,7 +861,7 @@ static ERL_NIF_TERM strong_rand_bytes_nif(ErlNifEnv* env, int argc, const ERL_NI
 }
 
 static ERL_NIF_TERM rand_bytes_3(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* (Bytes, TopMask, BottomMask) */    
+{/* (Bytes, TopMask, BottomMask) */
     unsigned bytes;
     unsigned char* data;
     unsigned top_mask, bot_mask;
@@ -877,7 +881,7 @@ static ERL_NIF_TERM rand_bytes_3(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
     return ret;
 }
 static ERL_NIF_TERM strong_rand_mpint_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{/* (Bytes, TopMask, BottomMask) */    
+{/* (Bytes, TopMask, BottomMask) */
     unsigned bits;
     BIGNUM *bn_rand;
     int top, bottom;
@@ -948,7 +952,7 @@ static ERL_NIF_TERM rand_uniform_nif(ErlNifEnv* env, int argc, const ERL_NIF_TER
 
     bn_to = BN_new();
     BN_sub(bn_to, bn_rand, bn_from);
-    BN_pseudo_rand_range(bn_rand, bn_to);      
+    BN_pseudo_rand_range(bn_rand, bn_to);
     BN_add(bn_rand, bn_rand, bn_from);
     dlen = BN_num_bytes(bn_rand);
     data = enif_make_new_binary(env, dlen+4, &ret);
@@ -966,7 +970,7 @@ static ERL_NIF_TERM mod_exp_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     BIGNUM *bn_base=NULL, *bn_exponent=NULL, *bn_modulo, *bn_result;
     BN_CTX *bn_ctx;
     unsigned char* ptr;
-    unsigned dlen;      
+    unsigned dlen;
     ERL_NIF_TERM ret;
 
     if (!get_bn_from_mpint(env, argv[0], &bn_base)
@@ -993,7 +997,7 @@ static ERL_NIF_TERM mod_exp_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
 }
 
 static int inspect_mpint(ErlNifEnv* env, ERL_NIF_TERM term, ErlNifBinary* bin)
-{    
+{
     return enif_inspect_binary(env, term, bin) &&
     bin->size >= 4 && get_int32(bin->data) == bin->size-4;
 }
@@ -1093,7 +1097,7 @@ static ERL_NIF_TERM aes_cbc_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
     unsigned char ivec[16];
     int i;
     unsigned char* ret_ptr;
-    ERL_NIF_TERM ret;    
+    ERL_NIF_TERM ret;
 
     if (!enif_inspect_iolist_as_binary(env, argv[0], &key_bin)
 	|| (key_bin.size != 16 && key_bin.size != 32)
@@ -1154,7 +1158,7 @@ static ERL_NIF_TERM rc4_encrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     RC4(&rc4_key, data.size, data.data,
 	enif_make_new_binary(env, data.size, &ret));
     return ret;
-}   
+}
 
 static ERL_NIF_TERM rc4_set_key(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {/* (Key) */
@@ -1165,7 +1169,7 @@ static ERL_NIF_TERM rc4_set_key(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
 	return enif_make_badarg(env);
     }
     RC4_set_key((RC4_KEY*)enif_make_new_binary(env, sizeof(RC4_KEY), &ret),
-		key.size, key.data);        
+		key.size, key.data);
     return ret;
 }
 
@@ -1187,7 +1191,7 @@ static ERL_NIF_TERM rc4_encrypt_with_state(ErlNifEnv* env, int argc, const ERL_N
 	enif_make_new_binary(env, data.size, &new_data));
 
     return enif_make_tuple2(env,new_state,new_data);
-}   
+}
 
 static ERL_NIF_TERM rc2_40_cbc_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {/* (Key,IVec,Data,IsEncrypt) */
@@ -1206,13 +1210,13 @@ static ERL_NIF_TERM rc2_40_cbc_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TER
 
     RC2_set_key(&rc2_key, 5, key_bin.data, 40);
     RC2_cbc_encrypt(data_bin.data,
-		    enif_make_new_binary(env, data_bin.size, &ret), 
+		    enif_make_new_binary(env, data_bin.size, &ret),
 		    data_bin.size, &rc2_key,
 		    ivec_bin.data,
 		    (argv[3] == atom_true));
 
     return ret;
-}   
+}
 
 static ERL_NIF_TERM rsa_sign_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {/* (Type,Data,Key=[E,N,D]) */
@@ -1250,7 +1254,7 @@ static ERL_NIF_TERM rsa_sign_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 	MD5(data_bin.data+4, data_bin.size-4, hmacbuf);
 	ERL_VALGRIND_ASSERT_MEM_DEFINED(hmacbuf, MD5_DIGEST_LENGTH);
 	i = RSA_sign(NID_md5, hmacbuf,MD5_DIGEST_LENGTH,
-		     ret_bin.data, &rsa_s_len, rsa);     
+		     ret_bin.data, &rsa_s_len, rsa);
     }
     RSA_free(rsa);
     if (i) {
@@ -1286,12 +1290,12 @@ static ERL_NIF_TERM dss_sign_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 	|| !enif_get_list_cell(env, tail, &head, &tail)
 	|| !get_bn_from_mpint(env, head, &dsa->priv_key)
 	|| !enif_is_empty_list(env,tail)) {
-	goto badarg;	
+	goto badarg;
     }
     if (argv[0] == atom_sha && inspect_mpint(env, argv[1], &data_bin)) {
 	SHA1(data_bin.data+4, data_bin.size-4, hmacbuf);
     }
-    else if (argv[0] == atom_none && enif_inspect_binary(env,argv[1],&data_bin) 
+    else if (argv[0] == atom_none && enif_inspect_binary(env,argv[1],&data_bin)
 	     && data_bin.size == SHA_DIGEST_LENGTH) {
 	memcpy(hmacbuf, data_bin.data, SHA_DIGEST_LENGTH);
     }
@@ -1352,7 +1356,7 @@ static ERL_NIF_TERM rsa_public_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TER
 	return enif_make_badarg(env);
     }
 
-    enif_alloc_binary(RSA_size(rsa), &ret_bin); 
+    enif_alloc_binary(RSA_size(rsa), &ret_bin);
 
     if (argv[3] == atom_true) {
 	ERL_VALGRIND_ASSERT_MEM_DEFINED(data_bin.data,data_bin.size);
@@ -1364,7 +1368,7 @@ static ERL_NIF_TERM rsa_public_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TER
     }
     else {
 	i = RSA_public_decrypt(data_bin.size, data_bin.data,
-			       ret_bin.data, rsa, padding);    
+			       ret_bin.data, rsa, padding);
 	if (i > 0) {
 	    ERL_VALGRIND_MAKE_MEM_DEFINED(ret_bin.data, i);
 	    enif_realloc_binary(&ret_bin, i);
@@ -1401,7 +1405,7 @@ static ERL_NIF_TERM rsa_private_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TE
 	return enif_make_badarg(env);
     }
 
-    enif_alloc_binary(RSA_size(rsa), &ret_bin); 
+    enif_alloc_binary(RSA_size(rsa), &ret_bin);
 
     if (argv[3] == atom_true) {
 	ERL_VALGRIND_ASSERT_MEM_DEFINED(data_bin.data,data_bin.size);
@@ -1413,7 +1417,7 @@ static ERL_NIF_TERM rsa_private_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TE
     }
     else {
 	i = RSA_private_decrypt(data_bin.size, data_bin.data,
-				ret_bin.data, rsa, padding);       
+				ret_bin.data, rsa, padding);
 	if (i > 0) {
 	    ERL_VALGRIND_MAKE_MEM_DEFINED(ret_bin.data, i);
 	    enif_realloc_binary(&ret_bin, i);
@@ -1454,10 +1458,10 @@ static ERL_NIF_TERM dh_generate_parameters_nif(ErlNifEnv* env, int argc, const E
     put_int32(g_ptr, g_len);
     BN_bn2bin(dh_params->p, p_ptr+4);
     BN_bn2bin(dh_params->g, g_ptr+4);
-    ERL_VALGRIND_MAKE_MEM_DEFINED(p_ptr+4, p_len);                
+    ERL_VALGRIND_MAKE_MEM_DEFINED(p_ptr+4, p_len);
     ERL_VALGRIND_MAKE_MEM_DEFINED(g_ptr+4, g_len);
     DH_free(dh_params);
-    return enif_make_list2(env, ret_p, ret_g);    
+    return enif_make_list2(env, ret_p, ret_g);
 }
 
 static ERL_NIF_TERM dh_check(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -1466,9 +1470,9 @@ static ERL_NIF_TERM dh_check(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]
     int i;
     ERL_NIF_TERM ret, head, tail;
 
-    if (!enif_get_list_cell(env, argv[0], &head, &tail)   
+    if (!enif_get_list_cell(env, argv[0], &head, &tail)
 	|| !get_bn_from_mpint(env, head, &dh_params->p)
-	|| !enif_get_list_cell(env, tail, &head, &tail)   
+	|| !enif_get_list_cell(env, tail, &head, &tail)
 	|| !get_bn_from_mpint(env, head, &dh_params->g)
 	|| !enif_is_empty_list(env,tail)) {
 
@@ -1483,12 +1487,12 @@ static ERL_NIF_TERM dh_check(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]
 	else if (i & DH_NOT_SUITABLE_GENERATOR)	ret = atom_not_suitable_generator;
 	else ret = enif_make_tuple2(env, atom_unknown, enif_make_uint(env, i));
     }
-    else { /* Check Failed */       
+    else { /* Check Failed */
 	ret = enif_make_tuple2(env, atom_error, atom_check_failed);
     }
     DH_free(dh_params);
     return ret;
-}   
+}
 
 static ERL_NIF_TERM dh_generate_key_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {/* (PrivKey, DHParams=[P,G]) */
@@ -1510,14 +1514,14 @@ static ERL_NIF_TERM dh_generate_key_nif(ErlNifEnv* env, int argc, const ERL_NIF_
 
     if (DH_generate_key(dh_params)) {
 	pub_len = BN_num_bytes(dh_params->pub_key);
-	prv_len = BN_num_bytes(dh_params->priv_key);    
+	prv_len = BN_num_bytes(dh_params->priv_key);
 	pub_ptr = enif_make_new_binary(env, pub_len+4, &ret_pub);
 	prv_ptr = enif_make_new_binary(env, prv_len+4, &ret_prv);
 	put_int32(pub_ptr, pub_len);
 	put_int32(prv_ptr, prv_len);
 	BN_bn2bin(dh_params->pub_key, pub_ptr+4);
 	BN_bn2bin(dh_params->priv_key, prv_ptr+4);
-	ERL_VALGRIND_MAKE_MEM_DEFINED(pub_ptr+4, pub_len);    
+	ERL_VALGRIND_MAKE_MEM_DEFINED(pub_ptr+4, pub_len);
 	ERL_VALGRIND_MAKE_MEM_DEFINED(prv_ptr+4, prv_len);
 	ret = enif_make_tuple2(env, ret_pub, ret_prv);
     }
@@ -1537,7 +1541,7 @@ static ERL_NIF_TERM dh_compute_key_nif(ErlNifEnv* env, int argc, const ERL_NIF_T
     ERL_NIF_TERM ret, head, tail;
 
     if (!get_bn_from_mpint(env, argv[0], &pubkey)
-	|| !get_bn_from_mpint(env, argv[1], &dh_params->priv_key)       
+	|| !get_bn_from_mpint(env, argv[1], &dh_params->priv_key)
 	|| !enif_get_list_cell(env, argv[2], &head, &tail)
 	|| !get_bn_from_mpint(env, head, &dh_params->p)
 	|| !enif_get_list_cell(env, tail, &head, &tail)
@@ -1551,7 +1555,7 @@ static ERL_NIF_TERM dh_compute_key_nif(ErlNifEnv* env, int argc, const ERL_NIF_T
 	i = DH_compute_key(ret_bin.data, pubkey, dh_params);
 	if (i > 0) {
 	    if (i != ret_bin.size) {
-		enif_realloc_binary(&ret_bin, i); 
+		enif_realloc_binary(&ret_bin, i);
 	    }
 	    ret = enif_make_binary(env, &ret_bin);
 	}
@@ -1564,17 +1568,18 @@ static ERL_NIF_TERM dh_compute_key_nif(ErlNifEnv* env, int argc, const ERL_NIF_T
     return ret;
 }
 
-static ERL_NIF_TERM bf_cfb64_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])    
+#ifndef ANDROID_ARM
+static ERL_NIF_TERM bf_cfb64_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {/* (Key, Ivec, Data, IsEncrypt) */
     ErlNifBinary key_bin, ivec_bin, data_bin;
     BF_KEY bf_key; /* blowfish key 8 */
-    unsigned char bf_tkey[8]; /* blowfish ivec */    
+    unsigned char bf_tkey[8]; /* blowfish ivec */
     int bf_n = 0; /* blowfish ivec pos */
     ERL_NIF_TERM ret;
 
     if (!enif_inspect_iolist_as_binary(env, argv[0], &key_bin)
 	|| !enif_inspect_binary(env, argv[1], &ivec_bin)
-	|| ivec_bin.size != 8 
+	|| ivec_bin.size != 8
 	|| !enif_inspect_iolist_as_binary(env, argv[2], &data_bin)) {
 	return enif_make_badarg(env);
     }
@@ -1591,12 +1596,12 @@ static ERL_NIF_TERM bf_cbc_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 {/* (Key, Ivec, Data, IsEncrypt) */
     ErlNifBinary key_bin, ivec_bin, data_bin;
     BF_KEY bf_key; /* blowfish key 8 */
-    unsigned char bf_tkey[8]; /* blowfish ivec */    
+    unsigned char bf_tkey[8]; /* blowfish ivec */
     ERL_NIF_TERM ret;
 
     if (!enif_inspect_iolist_as_binary(env, argv[0], &key_bin)
 	|| !enif_inspect_binary(env, argv[1], &ivec_bin)
-	|| ivec_bin.size != 8 
+	|| ivec_bin.size != 8
 	|| !enif_inspect_iolist_as_binary(env, argv[2], &data_bin)
 	|| data_bin.size % 8 != 0) {
 	return enif_make_badarg(env);
@@ -1610,7 +1615,7 @@ static ERL_NIF_TERM bf_cbc_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
     return ret;
 }
 
-static ERL_NIF_TERM bf_ecb_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])    
+static ERL_NIF_TERM bf_ecb_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {/* (Key, Data, IsEncrypt) */
     ErlNifBinary key_bin, data_bin;
     BF_KEY bf_key; /* blowfish key 8 */
@@ -1627,17 +1632,17 @@ static ERL_NIF_TERM bf_ecb_crypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
     return ret;
 }
 
-static ERL_NIF_TERM blowfish_ofb64_encrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])    
+static ERL_NIF_TERM blowfish_ofb64_encrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {/* (Key, IVec, Data) */
     ErlNifBinary key_bin, ivec_bin, data_bin;
     BF_KEY bf_key; /* blowfish key 8 */
-    unsigned char bf_tkey[8]; /* blowfish ivec */    
+    unsigned char bf_tkey[8]; /* blowfish ivec */
     int bf_n = 0; /* blowfish ivec pos */
     ERL_NIF_TERM ret;
 
     if (!enif_inspect_iolist_as_binary(env, argv[0], &key_bin)
 	|| !enif_inspect_binary(env, argv[1], &ivec_bin)
-	|| ivec_bin.size != 8 
+	|| ivec_bin.size != 8
 	|| !enif_inspect_iolist_as_binary(env, argv[2], &data_bin)) {
 	return enif_make_badarg(env);
     }
@@ -1648,7 +1653,7 @@ static ERL_NIF_TERM blowfish_ofb64_encrypt(ErlNifEnv* env, int argc, const ERL_N
 		     data_bin.size, &bf_key, bf_tkey, &bf_n);
     return ret;
 }
-
+#endif
 
 
 #ifdef OPENSSL_THREADS /* vvvvvvvvvvvvvvv OPENSSL_THREADS vvvvvvvvvvvvvvvv */
@@ -1746,7 +1751,7 @@ static void hmac_md5(unsigned char *key, int klen, unsigned char *dbuf, int dlen
 }
 
 static void hmac_sha1(unsigned char *key, int klen,
-		      unsigned char *dbuf, int dlen, 
+		      unsigned char *dbuf, int dlen,
 		      unsigned char *hmacbuf)
 {
     SHA_CTX ctx;
