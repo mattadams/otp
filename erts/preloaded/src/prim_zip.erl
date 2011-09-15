@@ -179,8 +179,7 @@ get_z_file(F, Offset, ChunkSize, #primzip{zlib = Z, in = In0, input = Input}) ->
 			       extra_field_length = EFLen,
 			       comp_method = CompMethod} =
 		local_file_header_from_bin(BLH, F),
-	    DataOffs = ?LOCAL_FILE_HEADER_SZ + FNLen + EFLen
-		+ offset_over_z_data_descriptor(GPFlag),
+	    DataOffs = ?LOCAL_FILE_HEADER_SZ + FNLen + EFLen,
 	    case B of
 		<<_:DataOffs/binary, Data/binary>> ->
 		    Out = get_z_all(CompMethod, Data, Z, F),
@@ -210,12 +209,6 @@ get_z_all(?STORED, Stored, _Z, _F) ->
     Stored; % {Stored, CRC1};
 get_z_all(CompMethod, _, _, F) ->
     throw({unsupported_compression, F, CompMethod}).
-
-%% skip data descriptor if any
-offset_over_z_data_descriptor(GPFlag) when GPFlag band 8 =:= 8 ->
-    12;
-offset_over_z_data_descriptor(_GPFlag) ->
-    0.
 
 %% get the central directory from the archive
 get_central_dir(#primzip{in = In0, input = Input} = PrimZip, FilterFun, FilterAcc) ->
