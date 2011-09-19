@@ -102,45 +102,9 @@
 -define(CRYPTO_NIF_VSN,101).
 
 on_load() ->
-    LibBaseName = "crypto",
-    PrivDir = code:priv_dir(crypto),
-    LibName = case erlang:system_info(build_type) of
-		  opt ->
-		      LibBaseName;
-		  Type ->
-		      LibTypeName = LibBaseName ++ "."  ++ atom_to_list(Type),
-		      case (filelib:wildcard(
-			      filename:join(
-				[PrivDir,
-				 "lib",
-				 LibTypeName ++ "*"])) /= []) orelse
-			  (filelib:wildcard(
-			     filename:join(
-			       [PrivDir,
-				"lib", 
-				erlang:system_info(system_architecture),
-				LibTypeName ++ "*"])) /= []) of
-			  true -> LibTypeName;
-			  false -> LibBaseName
-		      end
-	      end,
-    Lib = filename:join([PrivDir, "lib", LibName]),
-    Status = case erlang:load_nif(Lib, ?CRYPTO_NIF_VSN) of
-		 ok -> ok;
-		 {error, {load_failed, _}}=Error1 ->
-		     ArchLibDir = 
-			 filename:join([PrivDir, "lib", 
-					erlang:system_info(system_architecture)]),
-		     Candidate =
-			 filelib:wildcard(filename:join([ArchLibDir,LibName ++ "*" ])),
-		     case Candidate of
-			 [] -> Error1;
-			 _ ->
-			     ArchLib = filename:join([ArchLibDir, LibName]),
-			     erlang:load_nif(ArchLib, ?CRYPTO_NIF_VSN)
-		     end;
-		 Error1 -> Error1
-	     end,
+    {ok, PrivDir} = init:get_argument(native_lib_path),
+    Lib = hd(hd(PrivDir)) ++ "/libcrypto_nif",
+    Status = erlang:load_nif(Lib, ?CRYPTO_NIF_VSN),
     case Status of
 	ok -> ok;
 	{error, {E, Str}} ->
