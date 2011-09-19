@@ -50,7 +50,7 @@
 -define(UNIT_IPV4,4).
 -define(UNIT_IPV6,16).
 
--define(PORT_PROGRAM, "inet_gethost").
+-define(PORT_PROGRAM, os:getenv("BINDIR") ++ "/inet_gethost").
 -define(DEFAULT_POOLSIZE, 4).
 -define(REQUEST_TIMEOUT, (inet_db:res_option(timeout)*4)).
 
