@@ -134,7 +134,8 @@ EMEM_LIBS =	$(LIBS) \
 		-L$(ERL_TOP)/erts/lib/$(TARGET) \
 		-L$(ERL_TOP)/erts/lib/internal/$(TARGET) \
 		-l$(EMEM_ERTS_LIB) \
-		$(EMEM_ETHR_LIBS)
+		$(EMEM_ETHR_LIBS) \
+		-lgcc
 
 EMEM_OBJS = $(addprefix $(EMEM_OBJ_DIR)/,$(notdir $(EMEM_SRCS:.c=.o)))
 

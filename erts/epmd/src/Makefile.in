@@ -123,7 +123,7 @@ clean:
 #
 
 $(BINDIR)/$(EPMD): $(EPMD_OBJS)
-	$(PURIFY) $(LD) $(LDFLAGS) -o $@ $(EPMD_OBJS) $(LIBS)
+	$(PURIFY) $(LD) $(LDFLAGS) -o $@ $(EPMD_OBJS) $(LIBS) -lgcc
 
 $(OBJDIR)/%.o: %.c epmd.h epmd_int.h
 	$(CC) $(CFLAGS) $(EPMD_FLAGS) -o $@ -c $<
